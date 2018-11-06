@@ -27,11 +27,13 @@ def get_hough_lines(write_image):
     changed_image = write_image.copy()
     GrayImage = cv2.cvtColor(write_image, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(GrayImage, 0, 150, apertureSize=3)
-    minLineLength = 1000
+    minLineLength = 5
     maxLineGap = 10
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength, maxLineGap)
     min_x1 = 999
     max_x2 = 0
+    min_y1 = 999
+    max_y2 = 0
 
     for line in lines:
         for x1, y1, x2, y2 in line:
@@ -40,14 +42,18 @@ def get_hough_lines(write_image):
                 min_x1 = x1
             if x2 > max_x2:
                 max_x2 = x2
+            if y1 > min_y1:
+                min_y1 = y1
+            if y2 < max_y2:
+                max_y2 = y2
 
+    print(f"minx:{min_x1},maxx:{max_x2},miny:{min_y1},maxy:{max_y2}")
     for line in lines:
         for x1, y1, x2, y2 in line:
-            if y2 - y1 < 50:
-                # cv2.line(changed_image, (min_x1, y1), (max_x2, y2), (0, 0, 0), 2)
-                pass
-            else:
-                print(y1, y2)
+            if -10 < y1 - y2 < 10:
+                cv2.line(changed_image, (min_x1, y1), (max_x2, y2), (0, 0, 0), 2)
+            if -10 < x2 - x1 < 10:
+                cv2.line(changed_image, (x1, min_y1), (x2, max_y2), (0, 0, 0), 2)
 
     cv2.line(changed_image, (min_x1, 0), (min_x1, changed_image.shape[0]), (0, 0, 0), 2)
     cv2.line(changed_image, (max_x2, 0), (max_x2, changed_image.shape[0]), (0, 0, 0), 2)
@@ -80,18 +86,17 @@ if __name__ == '__main__':
 
     th = get_thresh(closing)
 
-    cv2.imshow('changed_image', changed_image)
-    cv2.waitKey()
+    # cv2.imshow('changed_image', changed_image)
+    # cv2.waitKey()
 
-    cv2.imwrite(f'{sys.argv[1][:-4]}_houghlines.jpg', hough_lines)
+    # cv2.imwrite(f'{sys.argv[1][:-4]}_houghlines.jpg', hough_lines)
 
     labels = measure.label(th, connectivity=1)
     dst = color.label2rgb(labels)
-    print('regions number:', labels.max() + 1)
 
-    f, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6))
-    ax1.imshow(dst)
-    ax2.imshow(image)
+    f, ax1 = plt.subplots(1, 1, figsize=(16, 9))
+    ax1.imshow(image)
+    # ax2.imshow(dst)
 
     rects = []
 
@@ -114,18 +119,28 @@ if __name__ == '__main__':
             minr, minc, maxr, maxc = region.bbox
             rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
                                       fill=False, edgecolor='red', linewidth=2)
-            cv2.putText(image, str(region.area), (minc, minr + 30), font, fontScale, fontColor, lineType)
+            # cv2.putText(image, str(region.area), (minc, minr + 30), font, fontScale, fontColor, lineType)
             rects.append({'x': minc, 'y': minr, 'w': maxc - minc, 'h': maxr - minr})
             ax1.add_patch(rect)
+            cv2.rectangle(image, (minc, minr), (maxc, maxr), (0, 0, 255), 2)
         else:
             cnt += 1
             minr, minc, maxr, maxc = region.bbox
             rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
                                       fill=False, edgecolor='red', linewidth=2)
-            print(rect)
+            rect_dict = {
+                'x': minc,
+                'y': minr,
+                'w': maxc - minc,
+                'h': maxr - minr
+            }
+            rects.append(rect_dict)
             cv2.putText(image, str(region.area), (minc, minr + 30), font, fontScale, (0, 0, 255), lineType)
 
-    print(f'len(rects):{len(rects)}, drop : {cnt}')
+    # ax3.imshow(image)
+    cv2.imshow('image', image)
+    cv2.waitKey()
+    print(rects)
 
     plt.tight_layout()
     plt.show()

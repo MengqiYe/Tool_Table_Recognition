@@ -5,3 +5,9 @@ python 版本为 3.6
 ```python
 pip install -r requirements.txt
 ```
+
+# 调用方法
+在目录下激活python环境后，运行
+```shell
+python core/process.py images/1.png
+```
